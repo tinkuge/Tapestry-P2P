@@ -14,17 +14,33 @@ defmodule Tapestry do
 
     numnodes = Integer.parse(numnodes)
 
+
+    nreq = Integer.parse(nreq)
+
     n = elem(numnodes,0)
 
-    hashes = []
+    nodeids = []
+
+    #maintain a mapping from pid to their respective hashes just in case
+    phashmap = %{}
 
 
     nodeids = for i <- 0..n-1 do
-      pid = Actor.start_node({})
-      h = Actor.setState(pid)
-      [h|hashes]
+      #Get an 8 character random hash
+      hashed =  :crypto.strong_rand_bytes(4) |> Base.encode16
+      initstate = {hashed, nreq}
+
+      pid = Actor.start_node(initstate)
+      Map.put(phashmap, pid, hashed)
+      [pid|nodeids]
     end
 
-    hashes = List.flatten(hashes)
+    nodeids = List.flatten(nodeids)
+
+    for i <- nodeids do
+      
+    end
+
+
   end
 end

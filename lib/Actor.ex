@@ -12,14 +12,10 @@ defmodule Actor do
     {:ok, arg}
   end
 
-  def setState(pid) do
-    GenServer.call(pid)
-  end
+  #listening post
 
+  
 
-  #any changes to the default states will be done later. For now it stores the hash of curent node
-  def handle_call(state) do
-    hashed =  :crypto.strong_rand_bytes(4) |> Base.encode16
-    {:noreply, hashed}
-  end
+  #broadcast node's hash to other nodes
+
 end
