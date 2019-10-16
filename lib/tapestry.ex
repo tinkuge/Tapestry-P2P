@@ -1,18 +1,30 @@
 defmodule Tapestry do
-  @moduledoc """
-  Documentation for Tapestry.
-  """
 
-  @doc """
-  Hello world.
+  def start(_type, _args) do
+    System.argv() |> main()
+  end
 
-  ## Examples
+  def main(args) do
+    if length(args) != 2 do
+      IO.puts("Insufficient number of parameters. Terminating")
+      System.halt(1)
+    end
 
-      iex> Tapestry.hello()
-      :world
+    [numnodes, nreq] = args
 
-  """
-  def hello do
-    :world
+    numnodes = Integer.parse(numnodes)
+
+    n = elem(numnodes,0)
+
+    hashes = []
+
+
+    nodeids = for i <- 0..n-1 do
+      pid = Actor.start_node({})
+      h = Actor.setState(pid)
+      [h|hashes]
+    end
+
+    hashes = List.flatten(hashes)
   end
 end
