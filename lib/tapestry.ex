@@ -23,6 +23,7 @@ defmodule Tapestry do
 
     #maintain a mapping from pid to their respective hashes just in case
     phashmap = %{}
+    hpidmap = %{}
 
 
     nodeids = for i <- 0..n-1 do
@@ -32,15 +33,28 @@ defmodule Tapestry do
 
       pid = Actor.start_node(initstate)
       Map.put(phashmap, pid, hashed)
+      Map.put(hpidmap, hashed, pid)
       [pid|nodeids]
     end
 
     nodeids = List.flatten(nodeids)
 
-    for i <- nodeids do
-      
+    mailbox(numnodes)
+
+
+  end
+
+  def mailbox(0) do
+    :ok
+  end
+  def mailbox(n) do
+    receive do
+      {:broadcast, hash} -> broadcast(hash)
+      {:halt} -> mailbox(n-1)
     end
+  end
 
-
+  def broadcast(hash) do
+    #find nearest neighbor
   end
 end

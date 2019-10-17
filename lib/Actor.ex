@@ -14,7 +14,17 @@ defmodule Actor do
 
   #listening post
 
-  
+  def actMailBox() do
+    receive do
+      {:message_type} -> GenServer.cast(self())
+        # code
+    end
+
+  end
+
+  def handle_call() do
+
+  end
 
   #broadcast node's hash to other nodes
 
