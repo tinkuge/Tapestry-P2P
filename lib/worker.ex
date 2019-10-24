@@ -1,8 +1,5 @@
 defmodule Worker do
   @moduledoc false
-
-
-
   use GenServer
 
   def start_link(opts)  when is_tuple(opts)do
@@ -22,6 +19,7 @@ defmodule Worker do
 #    GenServer.cast(pid, {:handle_gossip, request_hops})
 #  end
   def handle_map(pid, map) do
+    #changed the timeout to infinity so that the process doesn't timeout while debugging
     GenServer.call(pid, {:handle_map, map}, :infinity)
   end
   def handle_call({:handle_map, map},
@@ -53,7 +51,8 @@ defmodule Worker do
         local_int_val = elem(Integer.parse(self_index,16),0)
 
 
-        #this block is unsustainable because of essentially a nested for loop. Takes a really long time to finish.
+        #this block of code is unsustainable because of essentially a nested for loop. 
+        #Takes a really long time to finish.
         #Either that or the arithmetic is taking a long time
         #gotta think of a better way
         local = Enum.map(
@@ -65,14 +64,14 @@ defmodule Worker do
                 if (String.starts_with?( Enum.at(hashes,i), Enum.at(levels_no_self,j))) do
                   mapkey = Enum.at(levels_no_self,j)
                   mapval = Enum.at(hashes,i)
-                  beginTime = Time.utc_now()
                   if Map.has_key?(localmap, mapkey) do
-                    
+                    #Current hash in the loop
                     curr_hash = Enum.at(hashes,i)
+                    #Existing hash value in the map
                     existing_hash = Map.get(localmap, mapkey)
                     #Integer.parse returns a tuple with the 0th index containing the actual value
                     existing_int_val = elem(Integer.parse(existing_hash,16), 0)
-                    
+                    #Current hash's int value
                     curr_int_val = elem(Integer.parse(curr_hash,16), 0)
                     #Distance is always non negative
                     prev_dist = abs(existing_int_val - local_int_val)
@@ -87,32 +86,41 @@ defmodule Worker do
                     localmap = Map.put(localmap, mapkey, mapval)
 
                   end
-
-                  endTime = Time.utc_now()
-                  duration = Time.diff(endTime, beginTime, :millisecond)
-                  IO.inspect(duration, label: "Total time taken in the inner loop")
                 end
               end
             )
           end
         )
+        
 
+        #local is a list of maps
         local = List.flatten(local)
+        #remove nil values from the resulting list
         local = Enum.reject(local, &is_nil/1)
 
         local_table = []
+
+        #convert each map into a list
         local_table = for i <- local do
           j = Map.to_list(i)
           [j|local_table]
         end
-        #cleaning the data in local by removing nil and add it to the map
-        #local_table = local |> List.flatten |> Enum.filter(& !is_nil(&1)) |> Enum.into(%{})
+        
+        #flatten the list and convert the whole list into a map
         local_table = local_table |> List.flatten() |> Enum.into(%{})
-        #local_table = local_table
         #IO.inspect(length(local_table), label: "Length of local table")
         #IO.puts("Local Table:")
-        #IO.inspect(local_table, label: "Local Table\n")
+        IO.inspect(local_table, label: "Local Table\n")
 
     {:reply, :ok, {master_pid, self_index, map, local_table, msg_fail_prob}}
+  end
+
+  def route_to_node({sourceid, sourcehash, desthash}) do
+    GenServer.cast(self(), {sourceid, sourcehash, desthash})
+  end
+
+  def handle_cast({sourceid, sourcehash, desthash}, 
+  {master_pid, self_index, map, local_table, msg_fail_prob}) do
+
   end
 end
