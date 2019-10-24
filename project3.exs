@@ -2,9 +2,8 @@ defmodule Project3 do
   require Integer
 
   def main(args) do
-    ## The probability of an actor failing.
+    ## The probability of and actor failing.
     msg_fail_prob = 0.000
-    local_map = Map.new()
 
     IO.inspect(args)
     ## Check args.
@@ -35,17 +34,17 @@ defmodule Project3 do
     hashIds = for i <- range do
       [] ++ :crypto.strong_rand_bytes(4) |> Base.encode16
     end
-#    IO.inspect(hashIds)
+    IO.inspect(hashIds)
     ## Create actors
     actors = Enum.map(
       hashIds,
       fn hash ->
         #        {master_pid, self_index, index_2_pid_map}
-        {:ok, actor_pid} = Worker.start_link({master_pid, hash, index_2_pid_map, local_map, msg_fail_prob})
+        {:ok, actor_pid} = Worker.start_link({master_pid, hash, index_2_pid_map, msg_fail_prob})
         actor_pid
       end
     )
-#    IO.inspect(actors)
+    IO.inspect(actors)
     ## Update index_2_pid_map, by using flat_map to create numNodes maps, then Enum.into actual map; because Elixir!
     index_2_pid_map_tuples = Enum.flat_map(
       range,
@@ -54,7 +53,6 @@ defmodule Project3 do
       end
     )
     index_2_pid_map = Enum.into(index_2_pid_map_tuples, %{})
-    IO.puts("index_2_pid_map in project3")
     IO.inspect(index_2_pid_map)
     ## Also pass the pid map of all actors to each actor.
     IO.puts("Sending index_2_pid_map to all actors...")
@@ -63,14 +61,6 @@ defmodule Project3 do
       fn actor -> Worker.handle_map(actor, index_2_pid_map) end
     )
 
-
-    ref = Process.monitor(master_pid)
-    receive do
-      {:DOWN, ^ref, _, _, _} -> :master_is_out
-    after
-      ## Optional timeout
-      600_000 -> :timeout
-    end
   end
 end
 

@@ -8,6 +8,3 @@ erl_crash.dump
 *.beam
 /config/*.secret.exs
 .elixir_ls/
-.idea/dictionaries/Tima.xml
-*.xml
-tapestry.iml
