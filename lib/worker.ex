@@ -115,33 +115,40 @@ defmodule Worker do
     {:reply, :ok, {master_pid, self_index, map, local_table, msg_fail_prob}}
   end
 
-  def route_to_node({sourceid, sourcehash, desthash, hops}) do
-    GenServer.cast(self(), {sourceid, sourcehash, desthash, hops})
+  def route_to_node({sourcepid, sourcehash, desthash, hops}) do
+    GenServer.cast(self(), {sourcepid, sourcehash, desthash, hops})
   end
 
-  def handle_cast({sourceid, sourcehash, desthash, hops}, 
+  def handle_cast({sourcepid, sourcehash, desthash, hops}, 
   {master_pid, self_index, map, local_table, msg_fail_prob}) do
+
+    #If the current node is destination, print the hops and possibly send it to master
     if desthash == self_index do
       IO.inspect(hops, label: "Number of hops taken")
+      
       #incomplete
 
+    #If the current node is not the destination, increment the hops by 1
     else
       hops = hops + 1
+      #if the destination hash is in the local table of the current node
+      #it means the current node is next to destination node
       if Map.has_key?(local_table, desthash) do
         nextnodepid = Map.get(map, desthash)
-        GenServer.cast(nextnodepid, {sourceid, sourcehash, desthash, hops})
+        GenServer.cast(nextnodepid, {sourcepid, sourcehash, desthash, hops})
 
       else
-        #find the closest node that can route to destination
+        #find the closest node to current node that can route to destination
         #Use longest common prefix to find the closest node
+
+        #get all prefixes of the current node in the local table
         pref = Map.keys(local_table)
-        
-        self_index_prefix = Enum.map(0..byte_size(self_index)-1, fn i -> binary_part(self_index,0,i) end)
 
-        rev_sip = Enum.reverse(self_index_prefix)        
-
-
+        #get the first character of the destination hash
         first_char = String.first(desthash)
+
+        #record all the potential hashes that share the same prefixes as dest_hash
+        potential_hashes = []
         potential_hashes = for i <- pref do
           if String.starts_with?(i, first_char) do
             [[i]|potential_hashes]
@@ -149,30 +156,40 @@ defmodule Worker do
         end
 
         potential_hashes = List.flatten(potential_hashes)
+        potential_hashes = Enum.reject(potential_hashes, &is_nil/1)
 
         #if there are multiple nodes with common prefix  as the destination
         #find the node with least distance to destination
         if length(potential_hashes) > 1 do
           min_dist_node = ""
           min_dist = nil
-          for i <- potential_hashes do
-            diff = elem(Integer.parse(i), 0)
-            if min_dist == nil || diff < min_dist_node do
+          {min_dist_node, min_dist} = for i <- potential_hashes do
+            diff = abs(elem(Integer.parse(i), 0) - elem(Integer.parse(desthash), 0))
+            if (min_dist == nil) || (diff < min_dist) do
               min_dist = diff
               min_dist_node = i
+              {min_dist_node, min_dist}
+
+            else
+              {min_dist_node, min_dist}
             end
           end
 
+          #Call the cast of next node
           nextnodepid = Map.get(map, min_dist_node)
-          GenServer.cast(nextnodepid, {sourceid, sourcehash, desthash, hops})
+          GenServer.cast(nextnodepid, {sourcepid, sourcehash, desthash, hops})
 
         else
+          #if there's only a single node that can be used to potentially reach destination#
+          #call that node
           nextnodepid = Map.get(map, List.first(potential_hashes))
-          GenServer.cast(nextnodepid, {sourceid, sourcehash, desthash, hops})
+          GenServer.cast(nextnodepid, {sourcepid, sourcehash, desthash, hops})
         end
         
       end
     end
+
+    {:noreply, {master_pid, self_index, map, local_table, msg_fail_prob}}
 
 
   end
