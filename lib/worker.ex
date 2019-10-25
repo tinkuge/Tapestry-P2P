@@ -115,12 +115,39 @@ defmodule Worker do
     {:reply, :ok, {master_pid, self_index, map, local_table, msg_fail_prob}}
   end
 
-  def route_to_node({sourceid, sourcehash, desthash}) do
-    GenServer.cast(self(), {sourceid, sourcehash, desthash})
+  def route_to_node({sourceid, sourcehash, desthash, hops}) do
+    GenServer.cast(self(), {sourceid, sourcehash, desthash, hops})
   end
 
-  def handle_cast({sourceid, sourcehash, desthash}, 
+  def handle_cast({sourceid, sourcehash, desthash, hops}, 
   {master_pid, self_index, map, local_table, msg_fail_prob}) do
+    if desthash == self_index do
+      IO.inspect(hops, label: "Number of hops taken")
+
+    else
+      hops = hops + 1
+      if Map.has_key?(local_table, desthash) do
+        destpid = Map.get(map, desthash)
+        GenServer.cast(destpid, {sourceid, sourcehash, desthash, hops})
+
+      else
+        #find the closest node that can route to destination
+        #Use longest common prefix to find the closest node
+        pref = Map.keys(local_table)
+
+        range = 0..length(pref-1)
+
+        fchar = String.first(desthash)
+        for i <- range do
+          if String.starts_with?(i, fchar) do
+              pfix = Regex.run(~r/#{fchar}*/, i)
+              
+          end
+        end
+        
+      end
+    end
+
 
   end
 end
