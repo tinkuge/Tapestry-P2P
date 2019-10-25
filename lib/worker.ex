@@ -123,26 +123,52 @@ defmodule Worker do
   {master_pid, self_index, map, local_table, msg_fail_prob}) do
     if desthash == self_index do
       IO.inspect(hops, label: "Number of hops taken")
+      #incomplete
 
     else
       hops = hops + 1
       if Map.has_key?(local_table, desthash) do
-        destpid = Map.get(map, desthash)
-        GenServer.cast(destpid, {sourceid, sourcehash, desthash, hops})
+        nextnodepid = Map.get(map, desthash)
+        GenServer.cast(nextnodepid, {sourceid, sourcehash, desthash, hops})
 
       else
         #find the closest node that can route to destination
         #Use longest common prefix to find the closest node
         pref = Map.keys(local_table)
+        
+        self_index_prefix = Enum.map(0..byte_size(self_index)-1, fn i -> binary_part(self_index,0,i) end)
 
-        range = 0..length(pref-1)
+        rev_sip = Enum.reverse(self_index_prefix)        
 
-        fchar = String.first(desthash)
-        for i <- range do
-          if String.starts_with?(i, fchar) do
-              pfix = Regex.run(~r/#{fchar}*/, i)
-              
+
+        first_char = String.first(desthash)
+        potential_hashes = for i <- pref do
+          if String.starts_with?(i, first_char) do
+            [[i]|potential_hashes]
           end
+        end
+
+        potential_hashes = List.flatten(potential_hashes)
+
+        #if there are multiple nodes with common prefix  as the destination
+        #find the node with least distance to destination
+        if length(potential_hashes) > 1 do
+          min_dist_node = ""
+          min_dist = nil
+          for i <- potential_hashes do
+            diff = elem(Integer.parse(i), 0)
+            if min_dist == nil || diff < min_dist_node do
+              min_dist = diff
+              min_dist_node = i
+            end
+          end
+
+          nextnodepid = Map.get(map, min_dist_node)
+          GenServer.cast(nextnodepid, {sourceid, sourcehash, desthash, hops})
+
+        else
+          nextnodepid = Map.get(map, List.first(potential_hashes))
+          GenServer.cast(nextnodepid, {sourceid, sourcehash, desthash, hops})
         end
         
       end
