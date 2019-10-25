@@ -33,7 +33,8 @@ defmodule Project3 do
 
     index_2_pid_map = Map.new()
     ## Start some actors.All actors need to know the master_pid, and their index.
-    range = 0..numNodes - 1 # Range is inclusive on both sides.
+    #changed this to numnodes - 2 so that 
+    range = 0..numNodes - 2 # Range is inclusive on both sides.
 #    hashIds = :crypto.strong_rand_bytes(4) |> Base.encode16
     hashIds = for i <- range do
       [] ++ :crypto.strong_rand_bytes(4) |> Base.encode16
@@ -70,15 +71,29 @@ defmodule Project3 do
     
 
     for i <- hashIds do
-      randId = getRandomID(i, hashIds)
-      #randpid = Map.get(index_2_pid_map, randId)
-      currpid = Map.get(index_2_pid_map, i)
-      args = {currpid, i, randId, 0}
-      Worker.route_to_node(args)
+      #generates j number of random requests
+      for j <- 0..numRequests - 1 do
+        randId = getRandomID(i, hashIds)
+        #randpid = Map.get(index_2_pid_map, randId)
+        currpid = Map.get(index_2_pid_map, i)
+        args = {currpid, i, randId, 0}
+        Worker.route_to_node(args)
+      end
     end
 
     #Dynamic node insertion
+    dynNodeHash = :crypto.strong_rand_bytes(4) |> Base.encode16
+    hashIds = [[dynNodeHash]|hashIds]
+    hashIds = List.flatten(hashIds)
+    {:ok, dynpid} = Worker.start_link({master_pid, dynNodeHash, index_2_pid_map, local_map, msg_fail_prob})
+    index_2_pid_map = Map.put(index_2_pid_map, dynNodeHash, dynpid)
+    Worker.handle_map(dynpid, index_2_pid_map)
 
+    #This pretty much updates local tables for all nodes
+    for i <- 1..length(hashIds - 1) do
+      Worker.handle_map(i, index_2_pid_map)
+    end
+    
     ref = Process.monitor(master_pid)
     receive do
       {:DOWN, ^ref, _, _, _} -> :master_is_out
