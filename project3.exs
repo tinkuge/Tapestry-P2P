@@ -32,7 +32,7 @@ defmodule Project3 do
     ## Start some actors.All actors need to know the master_pid, and their index.
     range = 0..numNodes - 1 # Range is inclusive on both sides.
 #    hashIds = :crypto.strong_rand_bytes(4) |> Base.encode16
-    hashIds = for i <- range do
+    hashIds = for _i <- range do
       [] ++ :crypto.strong_rand_bytes(4) |> Base.encode16
     end
 #    IO.inspect(hashIds)
@@ -65,10 +65,10 @@ defmodule Project3 do
     reqs = []
     all_hash_requests=Enum.map(
     0..Enum.count(actors)-1,
-    fn i->
+    fn _i->
       Enum.map(
         0..numRequests-1,
-        fn j-> reqs ++ Enum.random(hashIds) end
+        fn _j-> reqs ++ Enum.random(hashIds) end
       )
     end
     )
