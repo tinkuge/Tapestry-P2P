@@ -123,75 +123,30 @@ defmodule Worker do
         {:handle_route, sourcepid, sourcehash, desthash, hops},
         {master_pid, self_index, map, local_table, msg_fail_prob, results}
       ) do
-    IO.puts("wtf")
     #If the current node is destination, print the hops and possibly send it to master
-    if desthash == self_index do
+    if String.equivalent?(desthash, self_index)do
       IO.inspect(hops, label: "Number of hops taken")
       Master.decrement_alive(master_pid)
       #incomplete
+      {:noreply, {master_pid, self_index, map, local_table, msg_fail_prob, hops}}
 
-      #If the current node is not the destination, increment the hops by 1
     else
-      hops = hops + 1
-      #if the destination hash is in the local table of the current node
-      #it means the current node is next to destination node
-      if Map.has_key?(local_table, desthash) do
-        nextnodepid = Map.get(map, desthash)
-        GenServer.cast(nextnodepid, {sourcepid, sourcehash, desthash, hops})
+      new_hops = hops + 1
 
-      else
-        #find the closest node to current node that can route to destination
-        #Use longest common prefix to find the closest node
 
-        #get all prefixes of the current node in the local table
-        pref = Map.keys(local_table)
+      pref = Map.keys(local_table)
 
-        #get the first character of the destination hash
-        first_char = String.first(desthash)
+      dest_prefix = Enum.map(1..byte_size(desthash) - 1, fn i -> binary_part(desthash, 0, i) end)
+      matches = Enum.filter(pref, fn el -> Enum.member?(dest_prefix, el) end)
+                |> Enum.sort_by(&String.length/1)
+      biggest_match = Map.get(local_table, Enum.at(matches, 0))
+      biggest_match_pid = Map.get(map, biggest_match)
 
-        #record all the potential hashes that share the same prefixes as dest_hash
-        potential_hashes = []
-        potential_hashes = for i <- pref do
-          if String.starts_with?(i, first_char) do
-            [[i] | potential_hashes]
-          end
-        end
 
-        potential_hashes = List.flatten(potential_hashes)
-        potential_hashes = Enum.reject(potential_hashes, &is_nil/1)
+      Worker.route_to_node(biggest_match_pid, {sourcepid, sourcehash, desthash, new_hops})
 
-        #if there are multiple nodes with common prefix  as the destination
-        #find the node with least distance to destination
-        if length(potential_hashes) > 1 do
-          min_dist_node = ""
-          min_dist = nil
-          this_is_a_list = for i <- potential_hashes do
-            diff = abs(elem(Integer.parse(i, 16), 0) - elem(Integer.parse(desthash, 16), 0))
-            if (min_dist == nil) || (diff < min_dist) do
-              min_dist = diff
-              min_dist_node = i
-              {min_dist_node, min_dist}
-            else
-              {min_dist_node, min_dist}
-            end
-          end
-          {min_dist_node, min_dist} = Enum.at(this_is_a_list, 0)
-          #Call the cast of next node
-          nextnodepid = Map.get(map, min_dist_node)
-          GenServer.cast(nextnodepid, {sourcepid, sourcehash, desthash, hops})
+      {:noreply, {master_pid, self_index, map, local_table, msg_fail_prob, [new_hops | results]}}
 
-        else
-          #if there's only a single node that can be used to potentially reach destination#
-          #call that node
-          nextnodepid = Map.get(map, List.first(potential_hashes))
-          GenServer.cast(nextnodepid, {sourcepid, sourcehash, desthash, hops})
-        end
-
-      end
     end
-
-    {:noreply, {master_pid, self_index, map, local_table, msg_fail_prob, [hops | results]}}
-
-
   end
 end
