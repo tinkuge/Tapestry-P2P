@@ -28,9 +28,20 @@ defmodule Master do
     if Enum.count(all_hops)+1 == numRequests*numNodes do
       ## Wait a bit for all print messages to flush out :)
       Process.sleep(2000)
+      IO.puts("****************************************************")
+      IO.puts("****************************************************")
+      IO.puts("****************************************************")
+      IO.puts("****************************************************")
+      IO.puts("")
       IO.puts("Max number of hops is: ")
       IO.inspect(Enum.max(new_all_hops))
       IO.puts("Master# All actors finished!")
+      IO.puts("")
+      IO.puts("****************************************************")
+      IO.puts("****************************************************")
+      IO.puts("****************************************************")
+      IO.puts("****************************************************")
+
 
       Process.exit(self(), :SUCCESS)
     else
