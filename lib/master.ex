@@ -9,39 +9,33 @@ defmodule Master do
   end
 
 #  def init({alive_count}) do
-  def init({numNodes,numRequests}) do
-    max_hop = 0
-    {:ok, {numNodes,numRequests, max_hop}}
-#    {:ok, {alive_count, max_hop}}
-  end
-  def increment_alive(pid) do
-    GenServer.cast(pid, {:increment_alive, 1})
+  def init({numNodes, numRequests}) do
+    all_hops = []
+    {:ok, {numNodes, numRequests,all_hops}}
+#    {:ok, {numNodes, max_hop}}
   end
 
-  def decrement_alive(pid) do
-    GenServer.cast(pid, {:increment_alive, -1})
+  def decrement_alive(pid, hops) do
+    GenServer.cast(pid, {:decrement_alive, 1, hops})
   end
 
-  def handle_call(_msg, _from, state) do
-    {:reply, :ok, state}
-  end
 
-  def handle_cast(_msg, state) do
-    {:noreply, state}
-  end
   @impl true
-  def handle_cast({:increment_alive, count}, {alive_count}) do
+  def handle_cast({:decrement_alive, count, hops}, {numNodes, numRequests,all_hops}) do
     ## Count will be -1 in this project.
-    new_live_count = alive_count + count
+    new_all_hops = all_hops ++[hops]
     ## If no node is now alive, we're done.
-    if new_live_count == 0 do
+    if Enum.count(all_hops)+1 == numRequests*numNodes do
       ## Wait a bit for all print messages to flush out :)
       Process.sleep(2000)
+      IO.puts("Max number of hops is: ")
+      IO.inspect(Enum.max(new_all_hops))
       IO.puts("Master# All actors finished!")
+
       Process.exit(self(), :SUCCESS)
     else
-      #      IO.puts("Master# alive actors: #{new_live_count}")
-      {:noreply, { new_live_count}}
+      #      IO.puts("Master# alive actors: #{new_numRequests}")
+      {:noreply, { numNodes,numRequests, new_all_hops}}
     end
   end
 

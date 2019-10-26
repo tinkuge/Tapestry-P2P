@@ -26,7 +26,7 @@ defmodule Project3 do
       exit(1)
     end
     ## Start the Master.
-    {:ok, master_pid} = Master.start_link({numNodes,numRequests})
+    {:ok, master_pid} = Master.start_link({numNodes, numRequests})
 
     index_2_pid_map = Map.new()
     ## Start some actors.All actors need to know the master_pid, and their index.
@@ -41,7 +41,7 @@ defmodule Project3 do
       hashIds,
       fn hash ->
         #        {master_pid, self_index, index_2_pid_map}
-        {:ok, actor_pid} = Worker.start_link({master_pid, hash, index_2_pid_map, local_map, msg_fail_prob,[]})
+        {:ok, actor_pid} = Worker.start_link({master_pid, hash, index_2_pid_map, local_map, msg_fail_prob,[], numRequests})
         actor_pid
       end
     )
@@ -54,10 +54,10 @@ defmodule Project3 do
       end
     )
     index_2_pid_map = Enum.into(index_2_pid_map_tuples, %{})
-    IO.puts("index_2_pid_map in project3")
-    IO.inspect(index_2_pid_map)
+#    IO.puts("index_2_pid_map in project3")
+#    IO.inspect(index_2_pid_map)
     ## Also pass the pid map of all actors to each actor.
-    IO.puts("Sending index_2_pid_map to all actors...")
+#    IO.puts("Sending index_2_pid_map to all actors...")
     Enum.map(
       actors,
       fn actor -> Worker.handle_map(actor, index_2_pid_map) end
@@ -72,8 +72,8 @@ defmodule Project3 do
       )
     end
     )
-    IO.puts("List of list for random requests for all the nodes:")
-    IO.inspect(all_hash_requests)
+#    IO.puts("List of list for random requests for all the nodes:")
+#    IO.inspect(all_hash_requests)
 
     Enum.map(
       0..Enum.count(hashIds)-1,

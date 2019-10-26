@@ -7,9 +7,9 @@ defmodule Worker do
     GenServer.start_link(__MODULE__, opts)
   end
 
-  def init({master_pid, self_index, index_2_pid_map, local_table, msg_fail_prob, results}) do
+  def init({master_pid, self_index, index_2_pid_map, local_table, msg_fail_prob, results,numRequests}) do
 
-    {:ok, {master_pid, self_index, index_2_pid_map, local_table, msg_fail_prob, results}}
+    {:ok, {master_pid, self_index, index_2_pid_map, local_table, msg_fail_prob, results, numRequests}}
 
   end
 
@@ -21,7 +21,7 @@ defmodule Worker do
   def handle_call(
         {:handle_map, map},
         _from,
-        {master_pid, self_index, _index_2_pid_map, _local_table, msg_fail_prob, results}
+        {master_pid, self_index, _index_2_pid_map, _local_table, msg_fail_prob, results, numRequests}
       ) do
     #list of all the hex digits
     hex = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"]
@@ -110,9 +110,9 @@ defmodule Worker do
                   |> Enum.into(%{})
     #IO.inspect(length(local_table), label: "Length of local table")
     #IO.puts("Local Table:")
-    IO.inspect(local_table, label: "Local Table\n")
+#    IO.inspect(local_table, label: "Local Table\n")
 
-    {:reply, :ok, {master_pid, self_index, map, local_table, msg_fail_prob, results}}
+    {:reply, :ok, {master_pid, self_index, map, local_table, msg_fail_prob, results,numRequests}}
   end
 
   def route_to_node(pid, {sourcepid, sourcehash, desthash, hops}) do
@@ -121,21 +121,19 @@ defmodule Worker do
 
   def handle_cast(
         {:handle_route, sourcepid, sourcehash, desthash, hops},
-        {master_pid, self_index, map, local_table, msg_fail_prob, results}
+        {master_pid, self_index, map, local_table, msg_fail_prob, results,numRequests}
       ) do
     #If the current node is destination, print the hops and possibly send it to master
     if String.equivalent?(desthash, self_index)do
-      IO.inspect(hops, label: "Number of hops taken")
-      Master.decrement_alive(master_pid)
+#      IO.inspect(hops, label: "Number of hops taken")
+      Master.decrement_alive(master_pid, hops)
+
       #incomplete
-      {:noreply, {master_pid, self_index, map, local_table, msg_fail_prob, hops}}
+      {:noreply, {master_pid, self_index, map, local_table, msg_fail_prob, [hops]++results,numRequests}}
 
     else
       new_hops = hops + 1
-
-
       pref = Map.keys(local_table)
-
       dest_prefix = Enum.map(1..byte_size(desthash) - 1, fn i -> binary_part(desthash, 0, i) end)
       matches = Enum.filter(pref, fn el -> Enum.member?(dest_prefix, el) end)
                 |> Enum.sort_by(&String.length/1)
@@ -145,7 +143,7 @@ defmodule Worker do
 
       Worker.route_to_node(biggest_match_pid, {sourcepid, sourcehash, desthash, new_hops})
 
-      {:noreply, {master_pid, self_index, map, local_table, msg_fail_prob, [new_hops | results]}}
+      {:noreply, {master_pid, self_index, map, local_table, msg_fail_prob, results,numRequests}}
 
     end
   end
