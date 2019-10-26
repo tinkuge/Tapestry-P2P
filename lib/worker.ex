@@ -165,18 +165,17 @@ defmodule Worker do
         if length(potential_hashes) > 1 do
           min_dist_node = ""
           min_dist = nil
-          {min_dist_node, min_dist} = for i <- potential_hashes do
+          this_is_a_list = for i <- potential_hashes do
             diff = abs(elem(Integer.parse(i, 16), 0) - elem(Integer.parse(desthash, 16), 0))
             if (min_dist == nil) || (diff < min_dist) do
               min_dist = diff
               min_dist_node = i
               {min_dist_node, min_dist}
-
             else
               {min_dist_node, min_dist}
             end
           end
-
+          {min_dist_node, min_dist} = Enum.at(this_is_a_list, 0)
           #Call the cast of next node
           nextnodepid = Map.get(map, min_dist_node)
           GenServer.cast(nextnodepid, {sourcepid, sourcehash, desthash, hops})
