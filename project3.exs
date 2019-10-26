@@ -81,7 +81,7 @@ defmodule Project3 do
         Enum.map(
         0..numRequests-1,
         fn j ->
-          Worker.route_to_node({Map.get(index_2_pid_map, Enum.at(hashIds,i)),Enum.at(hashIds,i) , Enum.at(Enum.at(all_hash_requests,j),i), 0})
+          Worker.route_to_node(Enum.at(actors, i), {Map.get(index_2_pid_map, Enum.at(hashIds,i)),Enum.at(hashIds,i) , Enum.at(Enum.at(all_hash_requests,i),j), 0})
         end
         ) end
     )
