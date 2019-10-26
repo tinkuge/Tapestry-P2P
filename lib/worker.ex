@@ -7,24 +7,20 @@ defmodule Worker do
     GenServer.start_link(__MODULE__, opts)
   end
 
-  def init({master_pid, self_index, index_2_pid_map, local_table, msg_fail_prob}) do
+  def init({master_pid, self_index, index_2_pid_map, local_table, msg_fail_prob,results}) do
 
-    {:ok, {master_pid, self_index, index_2_pid_map, local_table, msg_fail_prob}}
+    {:ok, {master_pid, self_index, index_2_pid_map, local_table, msg_fail_prob,results}}
 
   end
 
   ## Interface.
-
-#  def request(pid, request_hops) do
-#    GenServer.cast(pid, {:handle_gossip, request_hops})
-#  end
   def handle_map(pid, map) do
     #changed the timeout to infinity so that the process doesn't timeout while debugging
     GenServer.call(pid, {:handle_map, map}, :infinity)
   end
   def handle_call({:handle_map, map},
         _from,
-        {master_pid, self_index, _index_2_pid_map, _local_table, msg_fail_prob}) do
+        {master_pid, self_index, _index_2_pid_map, _local_table, msg_fail_prob,results}) do
         #list of all the hex digits
         hex = ["0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F"]
         #making all the prefixes based on the self_index
@@ -112,15 +108,16 @@ defmodule Worker do
         #IO.puts("Local Table:")
         IO.inspect(local_table, label: "Local Table\n")
 
-    {:reply, :ok, {master_pid, self_index, map, local_table, msg_fail_prob}}
+    {:reply, :ok, {master_pid, self_index, map, local_table, msg_fail_prob, results}}
   end
 
   def route_to_node({sourcepid, sourcehash, desthash, hops}) do
+
     GenServer.cast(self(), {sourcepid, sourcehash, desthash, hops})
   end
 
   def handle_cast({sourcepid, sourcehash, desthash, hops}, 
-  {master_pid, self_index, map, local_table, msg_fail_prob}) do
+  {master_pid, self_index, map, local_table, msg_fail_prob, results}) do
 
     #If the current node is destination, print the hops and possibly send it to master
     if desthash == self_index do
@@ -189,7 +186,7 @@ defmodule Worker do
       end
     end
 
-    {:noreply, {master_pid, self_index, map, local_table, msg_fail_prob}}
+    {:noreply, {master_pid, self_index, map, local_table, msg_fail_prob,[hops|results]}}
 
 
   end

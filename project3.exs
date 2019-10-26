@@ -41,7 +41,7 @@ defmodule Project3 do
       hashIds,
       fn hash ->
         #        {master_pid, self_index, index_2_pid_map}
-        {:ok, actor_pid} = Worker.start_link({master_pid, hash, index_2_pid_map, local_map, msg_fail_prob})
+        {:ok, actor_pid} = Worker.start_link({master_pid, hash, index_2_pid_map, local_map, msg_fail_prob,[]})
         actor_pid
       end
     )
@@ -62,8 +62,29 @@ defmodule Project3 do
       actors,
       fn actor -> Worker.handle_map(actor, index_2_pid_map) end
     )
+    reqs = []
+    all_hash_requests=Enum.map(
+    0..Enum.count(actors)-1,
+    fn i->
+      Enum.map(
+        0..numRequests-1,
+        fn j-> reqs ++ Enum.random(hashIds) end
+      )
+    end
+    )
+    IO.puts("List of list for random requests for all the nodes:")
+    IO.inspect(all_hash_requests)
 
-
+    Enum.map(
+      0..Enum.count(hashIds)-1,
+      fn i ->
+        Enum.map(
+        0..numRequests-1,
+        fn j ->
+          Worker.route_to_node({Map.get(index_2_pid_map, Enum.at(hashIds,i)),Enum.at(hashIds,i) , Enum.at(Enum.at(all_hash_requests,j),i), 0})
+        end
+        ) end
+    )
     ref = Process.monitor(master_pid)
     receive do
       {:DOWN, ^ref, _, _, _} -> :master_is_out
